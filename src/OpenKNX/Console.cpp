@@ -231,6 +231,10 @@ namespace OpenKNX
         }
     #endif
 #endif
+        else if (openknx.time.processCommand(cmd, diagnoseKo))
+        {
+           return true;
+        }
         else
         {
             // check modules for command
@@ -440,6 +444,7 @@ namespace OpenKNX
         printHelpLine("sleep", "Sleep for up to 20 seconds");
         printHelpLine("fatal", "Trigger a FatalError");
         printHelpLine("powerloss", "Trigger a PowerLoss (SavePin)");
+        printHelpLine("tm ?", "Help for time related commands");
 #ifdef OPENKNX_WATCHDOG
         printHelpLine("watchdog", "Show restart count by watchdog");
 #endif

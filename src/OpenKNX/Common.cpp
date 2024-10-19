@@ -2,6 +2,11 @@
 #include "OpenKNX/Facade.h"
 #include "OpenKNX/Stat/RuntimeStat.h"
 
+#ifndef OPENKNX_TimeProvider
+#include "OpenKNX/Time/TimeProviderKnx.h"
+#define OPENKNX_TimeProvider Time::TimeProviderKnx
+#endif
+
 #if defined(OPENKNX_DUALCORE) && defined(ARDUINO_ARCH_ESP32)
 extern void loop1();
 extern void setup1();
@@ -56,6 +61,7 @@ namespace OpenKNX
         initKnx();
 
         openknx.hardware.init();
+        openknx.time.setTimeProvider(new OPENKNX_TimeProvider());
     }
 
 #ifdef OPENKNX_DEBUG
@@ -215,6 +221,10 @@ namespace OpenKNX
 
     void Common::setup()
     {
+        bool configured = knx.configured();
+        if (configured)
+            openknx.time.setup();
+
         // Handle init of modules
         for (uint8_t i = 0; i < openknx.modules.count; i++)
             openknx.modules.list[i]->init();
@@ -228,7 +238,7 @@ namespace OpenKNX
         openknx.info1Led.off();
 #endif
 
-        bool configured = knx.configured();
+            
 
         // Handle setup of modules
         for (uint8_t i = 0; i < openknx.modules.count; i++)
@@ -330,8 +340,7 @@ namespace OpenKNX
 #ifdef OPENKNX_LOOPTIME_WARNING
         uint32_t start = millis();
 #endif
-
-        // loop console helper
+       // loop console helper
         RUNTIME_MEASURE_BEGIN(_runtimeConsole);
         openknx.console.loop();
         RUNTIME_MEASURE_END(_runtimeConsole);
@@ -341,6 +350,11 @@ namespace OpenKNX
         knx.loop();
         RUNTIME_MEASURE_END(_runtimeKnxStack);
 
+        // loop timemanager helper
+        RUNTIME_MEASURE_BEGIN(_runtimeTimeManager);
+        openknx.time.loop();
+        RUNTIME_MEASURE_END(_runtimeTimeManager);
+   
         // loop  appstack
         _loopMicros = micros();
 
@@ -705,6 +719,7 @@ namespace OpenKNX
         if (ko.asap() == BASE_KoManualSave)
             return processSaveKo(ko);
     #endif
+        openknx.time.processInputKo(ko);
 
         for (uint8_t i = 0; i < openknx.modules.count; i++)
         {

@@ -72,6 +72,7 @@ namespace OpenKNX
         Stat::RuntimeStat _runtimeConsole;
         Stat::RuntimeStat _runtimeKnxStack;
         Stat::RuntimeStat _runtimeModuleLoop;
+        Stat::RuntimeStat _runtimeTimeManager;
 #endif
 
 #ifdef BASE_StartupDelayBase
