@@ -21,7 +21,7 @@ namespace OpenKNX
                     openknx.console.printHelpLine("tm tz", "Show current posix timezone string");
                     openknx.console.printHelpLine("tm x", "Set time to 2024-07-01 15:00 UTC (for testing)");
                     openknx.console.printHelpLine("tm hhmm", "Set time to hh:mm UTC (for testing)");
-                    openknx.console.printHelpLine("tm YYMMDDhhmm", "Set time to 20YY-MM-DD hh:mm UTC (for testing)");        
+                    openknx.console.printHelpLine("tm YYMMDDhhmm", "Set time to 20YY-MM-DD hh:mm UTC (for testing)");
                     return true;
                 }
                 if (cmd == "tm")
@@ -29,7 +29,7 @@ namespace OpenKNX
                     if (openknx.time.isTimeValid())
                     {
                         auto time = getLocalTime();
-                        logInfoP("%04d-%02d-%02d %02d:%02d", (int)time.tm_year, (int)time.tm_mon, (int)time.tm_mday, (int)time.tm_hour, (int)time.tm_min);
+                        logInfoP("%04d-%02d-%02d %02d:%02d (%s)", (int)time.tm_year, (int)time.tm_mon + 1, (int)time.tm_mday, (int)time.tm_hour, (int)time.tm_min, time.tm_isdst ? "Summertime" : "Wintertime");
                     }
                     else
                         logInfoP("No valid time");
@@ -40,7 +40,7 @@ namespace OpenKNX
                     if (openknx.time.isTimeValid())
                     {
                         auto time = getUtcTime();
-                        logInfoP("%04d-%02d-%02d %02d:%02d UTC", (int)time.tm_year, (int)time.tm_mon, (int)time.tm_mday, (int)time.tm_hour, (int)time.tm_min);
+                        logInfoP("%04d-%02d-%02d %02d:%02d UTC", (int)time.tm_year, (int)time.tm_mon + 1, (int)time.tm_mday, (int)time.tm_hour, (int)time.tm_min);
                     }
                     else
                         logInfoP("No valid time");
@@ -62,7 +62,7 @@ namespace OpenKNX
                     if (cmd == "tm x")
                     {
                         tm.tm_year = 2024;
-                        tm.tm_mon = 7;
+                        tm.tm_mon = 7 - 1;
                         tm.tm_mday = 1;
                         tm.tm_hour = 15;
                         tm.tm_min = 0;
@@ -70,7 +70,7 @@ namespace OpenKNX
                     else if (cmd.length() == 7)
                     {
                         tm.tm_year = isTimeValid() ? getLocalTime().tm_year : 2024;
-                        tm.tm_mon = isTimeValid() ? getLocalTime().tm_mon : 7;
+                        tm.tm_mon = isTimeValid() ? getLocalTime().tm_mon : 7 - 1;
                         tm.tm_mday = isTimeValid() ? getLocalTime().tm_mday : 1;
                         tm.tm_hour = stoi(cmd.substr(3, 2));
                         tm.tm_min = stoi(cmd.substr(5, 2));
@@ -79,7 +79,7 @@ namespace OpenKNX
                     {
                         tm.tm_year = stoi(cmd.substr(3, 2)) + 2000;
                         tm.tm_mon = stoi(cmd.substr(5, 2));
-                        tm.tm_mday = stoi(cmd.substr(7, 2));
+                        tm.tm_mday = stoi(cmd.substr(7, 2)) - 1;
                         tm.tm_hour = stoi(cmd.substr(9, 2));
                         tm.tm_min = stoi(cmd.substr(11, 2));
                     }
@@ -88,7 +88,7 @@ namespace OpenKNX
                         logInfoP("Invalid time format");
                         return true;
                     }
-                    logInfoP("%04d-%02d-%02d %02d:%02d UTC", (int)tm.tm_year, (int)tm.tm_mon, (int)tm.tm_mday, (int)tm.tm_hour, (int)tm.tm_min);
+                    logInfoP("%04d-%02d-%02d %02d:%02d UTC", (int)tm.tm_year, (int)tm.tm_mon - 1, (int)tm.tm_mday, (int)tm.tm_hour, (int)tm.tm_min);
                     setUtcTime(tm);
                     return true;
                 }
@@ -100,6 +100,8 @@ namespace OpenKNX
             if (_timeProvider != nullptr)
                 delete _timeProvider;
             _timeProvider = timeProvider;
+            if (_setupCalled && _timeProvider != nullptr)
+                _timeProvider->setup();
         }
 
         void TimeManager::setup()
@@ -208,12 +210,26 @@ namespace OpenKNX
             logDebugP("Using timezone:");
             logDebugP(timezoneString);
             setenv("TZ", timezoneString, 1);
+            if (_timeProvider != nullptr)
+                _timeProvider->setup();
+            _setupCalled = true;
         }
 
         void TimeManager::loop()
         {
             if (_timeProvider != nullptr)
                 _timeProvider->loop();
+            updateDateTimeCache();
+        }
+
+        void TimeManager::updateDateTimeCache()
+        {
+            time_t now;
+            time(&now);
+            _timeCacheTimeStamp = max(millis(), 1UL);
+            _localTime = *localtime(&now);
+            _utcTime = *gmtime(&now);
+            _isTimeValid = _utcTime.tm_year >= 2024;
         }
 
         void TimeManager::processInputKo(GroupObject& ko)
@@ -230,6 +246,7 @@ namespace OpenKNX
             tv.tv_usec = 0;
 
             settimeofday(&tv, NULL);
+            updateDateTimeCache();
         }
 
         void TimeManager::setUtcTime(tm& tm)
@@ -241,28 +258,29 @@ namespace OpenKNX
 
             timezone timezoneUtc{0};
             settimeofday(&tv, &timezoneUtc);
+            updateDateTimeCache();
         }
 
-        bool TimeManager::isTimeValid()
+        tm TimeManager::convertUtcToLocalTime(tm& tmUtc)
         {
-            auto utcTime = getUtcTime();
-            if (utcTime.tm_year < 2024)
-                return false;
-            return true;
-        }
+            // Convert UTC tm to time_t (Unix timestamp as if it were local time)
+            time_t local_time = mktime(&tmUtc); // This treats the tm as local time
 
-        tm TimeManager::getLocalTime()
-        {
-            time_t now;
-            time(&now);
-            return *localtime(&now);
-        }
+            // Adjust the time difference (UTC -> Local)
+            // Use gmtime to find the UTC time and localtime to find the local time.
+            // The difference is the time zone offset.
+            struct tm* local_tm = localtime(&local_time); // Local time tm structure
+            struct tm* gmt_tm = gmtime(&local_time);      // UTC time tm structure
 
-        tm TimeManager::getUtcTime()
-        {
-            time_t now;
-            time(&now);
-            return *gmtime(&now);
+            // Compute the timezone offset in seconds
+            double timezone_offset = difftime(mktime(local_tm), mktime(gmt_tm));
+
+            // Apply the timezone offset to the original UTC time
+            time_t adjusted_time = mktime(&tmUtc) + timezone_offset;
+
+            // Convert adjusted time_t to local time
+            struct tm* final_local_tm = localtime(&adjusted_time);
+            return *final_local_tm;
         }
 
     } // namespace Time

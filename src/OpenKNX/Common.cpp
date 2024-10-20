@@ -3,8 +3,10 @@
 #include "OpenKNX/Stat/RuntimeStat.h"
 
 #ifndef OPENKNX_TimeProvider
+#ifdef BASE_KoTime
 #include "OpenKNX/Time/TimeProviderKnx.h"
 #define OPENKNX_TimeProvider Time::TimeProviderKnx
+#endif
 #endif
 
 #if defined(OPENKNX_DUALCORE) && defined(ARDUINO_ARCH_ESP32)
@@ -61,7 +63,9 @@ namespace OpenKNX
         initKnx();
 
         openknx.hardware.init();
+#ifdef OPENKNX_TimeProvider
         openknx.time.setTimeProvider(new OPENKNX_TimeProvider());
+#endif
     }
 
 #ifdef OPENKNX_DEBUG
@@ -223,7 +227,10 @@ namespace OpenKNX
     {
         bool configured = knx.configured();
         if (configured)
+        {
             openknx.time.setup();
+            openknx.sun.setup();
+        }
 
         // Handle init of modules
         for (uint8_t i = 0; i < openknx.modules.count; i++)
@@ -354,6 +361,10 @@ namespace OpenKNX
         RUNTIME_MEASURE_BEGIN(_runtimeTimeManager);
         openknx.time.loop();
         RUNTIME_MEASURE_END(_runtimeTimeManager);
+        // loop timemanager helper
+        RUNTIME_MEASURE_BEGIN(_runtimeSunCalculation);
+        openknx.sun.loop();
+        RUNTIME_MEASURE_END(_runtimeSunCalculation);
    
         // loop  appstack
         _loopMicros = micros();

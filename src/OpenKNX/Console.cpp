@@ -235,6 +235,10 @@ namespace OpenKNX
         {
            return true;
         }
+        else if (openknx.sun.processCommand(cmd, diagnoseKo))
+        {
+           return true;
+        }
         else
         {
             // check modules for command

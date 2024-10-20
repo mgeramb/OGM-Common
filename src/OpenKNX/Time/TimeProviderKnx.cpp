@@ -35,9 +35,53 @@ namespace OpenKNX
 {
     namespace Time
     {
+        void TimeProviderKnx::setup()
+        {
+#ifdef BASE_KoTime
+            if (KoBASE_Time.initialized())
+                processInputKo(KoBASE_Time);
+            if (!ParamBASE_CombinedTimeDate && KoBASE_Date.initialized())
+                processInputKo(KoBASE_Date);
+            // <Enumeration Text="Kommunikationsobjekt 'Sommerzeit aktiv'" Value="0" Id="%ENID%" />
+            // <Enumeration Text="Kombiniertes Datum/Zeit-KO (DPT 19)" Value="1" Id="%ENID%" />
+            // <Enumeration Text="Interne Berechnung (nur in Deutschland)" Value="2" Id="%ENID%" />
+            if (ParamBASE_SummertimeAll == 0 && KoBASE_IsSummertime.initialized())
+                processInputKo(KoBASE_IsSummertime);
+
+            if (!_hasDate || !_hasTime || !_hasSummertimeFlag)
+                _readRequestTimerStart = max(millis(), 1UL); // start read request timer
+#endif
+        }
 
         void TimeProviderKnx::loop()
         {
+#ifdef BASE_KoTime
+            if (_readRequestTimerStart != 0 && ParamBASE_ReadTimeDate)
+            {
+                if (millis() - _readRequestTimerStart > 30000)
+                {
+                    _readRequestTimerStart = max(millis(), 1UL);
+                    if (ParamBASE_CombinedTimeDate)
+                    {
+                        // combined date and time
+                        if (!_hasTime)
+                            KoBASE_Time.requestObjectRead();
+                    }
+                    else
+                    {
+                        // date and time from separate KOs
+                        if (!_hasTime)
+                            KoBASE_Time.requestObjectRead();
+                        if (!_hasDate)
+                            KoBASE_Date.requestObjectRead();
+                    }
+                    if (!_hasSummertimeFlag && ParamBASE_SummertimeAll == 0)
+                    {
+                        KoBASE_IsSummertime.requestObjectRead();
+                    }
+                }
+            }
+#endif
         }
 
         void TimeProviderKnx::processInputKo(GroupObject &ko)
@@ -77,7 +121,7 @@ namespace OpenKNX
                         // * NT - missing time
                         if (!(raw[6] & (DPT19_FAULT | DPT19_NO_YEAR | DPT19_NO_DATE | DPT19_NO_TIME)))
                         {
-                             _timeStampTimeReceived = millis();
+                            _timeStampTimeReceived = millis();
                             struct tm lTmp = value;
                             _dateTime.tm_year = lTmp.tm_year;
                             _dateTime.tm_mon = lTmp.tm_mon;
@@ -97,6 +141,12 @@ namespace OpenKNX
                                 _dateTime.tm_isdst = lSummertime;
                                 _hasSummertimeFlag = true;
                             }
+                            else if (!_hasSummertimeFlag && openknx.time.isTimeValid())
+                            {
+                                // We have a valid time, use the current summertime flag
+                                _dateTime.tm_isdst = openknx.time.getLocalTime().tm_isdst;
+                                _hasSummertimeFlag = true;
+                            }
                             checkHasAllDateTimeParts();
                         }
                     }
@@ -113,6 +163,27 @@ namespace OpenKNX
                         _dateTime.tm_min = lTmp.tm_min;
                         _dateTime.tm_sec = lTmp.tm_sec;
                         _hasTime = true;
+                        if (openknx.time.isTimeValid())
+                        {
+                            // time is already valid, use current date
+                            auto now = openknx.time.getLocalTime();
+                            if (lTmp.tm_hour == 0 && now.tm_hour == 23)
+                            {
+                                // New day started, correct date to use it
+                                now.tm_mday += 1;
+                                mktime(&now); // normalize
+                            }
+                            _dateTime.tm_year = now.tm_year;
+                            _dateTime.tm_mon = now.tm_mon;
+                            _dateTime.tm_mday = now.tm_mday;
+                            _hasDate = true;
+                            if (!_hasSummertimeFlag)
+                            {
+                                // use the current summertime flag
+                                _dateTime.tm_isdst = now.tm_isdst;
+                                _hasSummertimeFlag = true;
+                            }
+                        }
                         checkHasAllDateTimeParts();
                     }
                 }
@@ -124,6 +195,37 @@ namespace OpenKNX
                 if (ko.tryValue(value, DPT_Date))
                 {
                     struct tm lTmp = value;
+                    _dateTime.tm_year = lTmp.tm_year;
+                    _dateTime.tm_mon = lTmp.tm_mon;
+                    _dateTime.tm_mday = lTmp.tm_mday;
+                    _hasDate = true;
+                    if (openknx.time.isTimeValid())
+                    {
+                        auto now = openknx.time.getLocalTime();
+                        if (now.tm_year == _dateTime.tm_year && now.tm_mon == _dateTime.tm_mon && now.tm_mday == _dateTime.tm_mday)
+                        {
+                            // day not changed, wait for receiving time
+                        }
+                        else
+                        {
+                            now.tm_mday += 1;
+                            mktime(&now);
+                            if (now.tm_year == _dateTime.tm_year && now.tm_mon == _dateTime.tm_mon && now.tm_mday == _dateTime.tm_mday && (now.tm_hour == 23 || now.tm_hour == 0))
+                            {
+                                // Next day has start, correct the time
+                                _dateTime.tm_hour = 0;
+                                _dateTime.tm_min = 0;
+                                _dateTime.tm_sec = 0;
+                                _timeStampTimeReceived = millis();
+                                _hasTime = true;
+                                if (!_hasSummertimeFlag)
+                                {
+                                    _dateTime.tm_isdst = now.tm_isdst;
+                                    _hasSummertimeFlag = true;
+                                }
+                            }
+                        }
+                    }
                 }
             }
             else if (ko.asap() == BASE_KoIsSummertime)
@@ -134,7 +236,7 @@ namespace OpenKNX
                 if (ParamBASE_SummertimeAll == 0)
                 {
                     _dateTime.tm_isdst = ko.value(DPT_Switch);
-                    _hasSummertimeFlag;
+                    _hasSummertimeFlag = true;            
                     checkHasAllDateTimeParts();
                 }
             }
@@ -156,9 +258,10 @@ namespace OpenKNX
             {
                 tm tmp = _dateTime;
                 tmp.tm_sec += (millis() - _timeStampTimeReceived) / 1000;
-                mktime(&tmp);  // normalize
+                mktime(&tmp); // normalize
 
                 setLocalTime(tmp);
+                _readRequestTimerStart = 0;
                 _hasDate = false;
                 _hasTime = false;
                 _hasSummertimeFlag = false;
@@ -190,6 +293,5 @@ namespace OpenKNX
             // Check if DST is active (tm_isdst == 1 means DST is active)
             return local_timeinfo->tm_isdst > 0;
         }
-
     } // namespace Time
 } // namespace OpenKNX

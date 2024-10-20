@@ -9,6 +9,7 @@
 #include "OpenKNX/Module.h"
 #include "OpenKNX/Watchdog.h"
 #include "OpenKNX/Time/TimeManager.h"
+#include "OpenKNX/Sun/SunCalculation.h"
 
 #ifdef OPENKNX_RUNTIME_STAT
     #include "OpenKNX/Stat/RuntimeStat.h"
@@ -39,11 +40,12 @@ namespace OpenKNX
         Flash::Default flash;
         Information info;
         Console console;
-        Time::TimeManager time;
         Log::Logger logger;
         TimerInterrupt timerInterrupt;
         Hardware hardware;
         Watchdog watchdog;
+        Time::TimeManager time;
+        Sun::SunCalculation sun;
 
         Button progButton = Button("Prog");
 #ifdef FUNC1_BUTTON_PIN
