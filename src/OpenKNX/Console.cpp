@@ -448,7 +448,6 @@ namespace OpenKNX
         printHelpLine("sleep", "Sleep for up to 20 seconds");
         printHelpLine("fatal", "Trigger a FatalError");
         printHelpLine("powerloss", "Trigger a PowerLoss (SavePin)");
-        printHelpLine("tm ?", "Help for time related commands");
 #ifdef OPENKNX_WATCHDOG
         printHelpLine("watchdog", "Show restart count by watchdog");
 #endif
@@ -472,6 +471,8 @@ namespace OpenKNX
         printHelpLine("bcu mon", "Start BCU monitoring");
         printHelpLine("bcu rst", "Reset BCU");
 #endif
+        printHelpLine("tm ?", "Help for time related commands");
+        printHelpLine("sun", "Shows sun information");
 
         for (uint8_t i = 0; i < openknx.modules.count; i++)
             openknx.modules.list[i]->showHelp();

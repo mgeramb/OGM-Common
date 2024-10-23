@@ -27,15 +27,19 @@ namespace OpenKNX
 
           protected:
             /*
+            * Return the prefix for logging
+            */
+            virtual const std::string logPrefix() = 0;
+            /*
              * The time provide implementation can use this function to set the local time
              * By calling this function, the UTC time will be calculated
              */
-            void setLocalTime(tm& localTime);
+            void setLocalTime(tm& localTime, unsigned long millisReceivedTimestamp = millis());
             /*
              * The time provide implementation can use this function to set the UTC time
              * By calling this function, the local time will be calculated
              */
-            void setUtcTime(tm& utcTime);
+            void setUtcTime(tm& utcTime, unsigned long millisReceivedTimestamp = millis());
         };
     } // namespace Time
 } // namespace OpenKNX

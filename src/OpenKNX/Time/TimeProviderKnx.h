@@ -7,17 +7,28 @@ namespace OpenKNX
     {
         class TimeProviderKnx : public TimeProvider
         {
+            enum WaitStates
+            {
+                None,
+                InitialRead,
+                ReceiveOtherTelegrams
+            };
+            WaitStates _waitStates = WaitStates::None;
             bool _configured = false;
             bool _hasDate = false;
             bool _hasTime = false;
             unsigned long _timeStampTimeReceived = 0;
             bool _hasSummertimeFlag = false;
             tm _dateTime = {0};
-            unsigned long _readRequestTimerStart = 0;
+            unsigned long _waitTimerStart = 0;
             void checkHasAllDateTimeParts();
-            bool isSummerTimeActive(int year, int month, int day, int hour, int minute);
+            void initReceiveDateTimeStructure();
 
           public:
+            /*
+            * Return the prefix for logging
+            */
+            const std::string logPrefix() override;
             /*
              * called by the framework after the knx configuration was loaded
              */

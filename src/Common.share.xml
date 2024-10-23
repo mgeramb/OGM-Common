@@ -171,8 +171,8 @@
                   <Enumeration Text="Rio de Janeiro (-3 Stunden)" Value="19" Id="%ENID%" />
                   <Enumeration Text="(-2 Stunden)" Value="18" Id="%ENID%" />
                   <Enumeration Text="Azoren (-1 Stunde)" Value="17" Id="%ENID%" />
-                  <Enumeration Text="London (+1 Stunden)" Value="0" Id="%ENID%" />
-                  <Enumeration Text="Berlin (+2 Stunde)" Value="1" Id="%ENID%" />
+                  <Enumeration Text="London (+0 Stunden)" Value="0" Id="%ENID%" />
+                  <Enumeration Text="Berlin (+1 Stunde)" Value="1" Id="%ENID%" />
                   <Enumeration Text="Athen (+2 Stunden)" Value="2" Id="%ENID%" />
                   <Enumeration Text="Moskau (+3 Stunden)" Value="3" Id="%ENID%" />
                   <Enumeration Text="Dubai (+4 Stunden)" Value="4" Id="%ENID%" />
