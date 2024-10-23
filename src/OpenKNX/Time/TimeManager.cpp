@@ -79,7 +79,7 @@ namespace OpenKNX
                     else if (cmd.length() == 7)
                     {
                         tm.tm_year = isTimeValid() ? getLocalTime().tm_year : 2024 - 1900;
-                        tm.tm_mon = isTimeValid() ? getLocalTime().tm_mon : 7 - 1;
+                        tm.tm_mon = (isTimeValid() ? getLocalTime().tm_mon : 7) - 1;
                         tm.tm_mday = isTimeValid() ? getLocalTime().tm_mday : 1;
                         tm.tm_hour = stoi(cmd.substr(3, 2));
                         tm.tm_min = stoi(cmd.substr(5, 2));
@@ -88,7 +88,7 @@ namespace OpenKNX
                     {
                         tm.tm_year = stoi(cmd.substr(3, 2)) + 2000 - 1900;
                         tm.tm_mon = stoi(cmd.substr(5, 2)) - 1;
-                        tm.tm_mday = stoi(cmd.substr(7, 2)) - 1;
+                        tm.tm_mday = stoi(cmd.substr(7, 2));
                         tm.tm_hour = stoi(cmd.substr(9, 2));
                         tm.tm_min = stoi(cmd.substr(11, 2));
                     }
@@ -97,8 +97,8 @@ namespace OpenKNX
                         logInfoP("Invalid time format");
                         return true;
                     }
-                    logInfoP("%04d-%02d-%02d %02d:%02d UTC", (int)tm.tm_year + 1900, (int)tm.tm_mon + 1, (int)tm.tm_mday, (int)tm.tm_hour, (int)tm.tm_min);
-                    setUtcTime(tm, millis());
+                    logInfoP("%04d-%02d-%02d %02d:%02d", (int)tm.tm_year + 1900, (int)tm.tm_mon + 1, (int)tm.tm_mday, (int)tm.tm_hour, (int)tm.tm_min);
+                    setLocalTime(tm, millis());
                     return true;
                 }
             }
@@ -273,56 +273,6 @@ namespace OpenKNX
             timezone timezoneUtc{0};
             std::time_t epoch = mktime(&tmx) - _timezone;
             setTime(epoch, &timezoneUtc, millisReceivedTimestamp);
-
-            tm tm1 = {0};
-            tm1.tm_hour = 15;
-            tm1.tm_mon = 7;
-            tm1.tm_mday = 0;
-            tm1.tm_year = 2024 - 1900;
-
-            auto time = convertUtcToLocalTime(tm1);
-            logDebugP("%04d-%02d-%02d %02d:%02d:%02d (%s) converted", (int)time.tm_year + 1900, (int)time.tm_mon + 1, (int)time.tm_mday, (int)time.tm_hour, (int)time.tm_sec, (int)time.tm_min, time.tm_isdst ? "Summertime" : "Wintertime");
-
-            time = convertLocalTimeToUtc(time);
-            logDebugP("%04d-%02d-%02d %02d:%02d:%02d (UTC) converted", (int)time.tm_year + 1900, (int)time.tm_mon + 1, (int)time.tm_mday, (int)time.tm_hour, (int)time.tm_sec, (int)time.tm_min);
-
-            tm tm2 = {0};
-            tm2.tm_hour = 15;
-            tm2.tm_mon = 11;
-            tm2.tm_mday = 0;
-            tm2.tm_year = 2024 - 1900;
-
-            time = convertUtcToLocalTime(tm2);
-            logDebugP("%04d-%02d-%02d %02d:%02d:%02d (%s) converted", (int)time.tm_year + 1900, (int)time.tm_mon + 1, (int)time.tm_mday, (int)time.tm_hour, (int)time.tm_sec, (int)time.tm_min, time.tm_isdst ? "Summertime" : "Wintertime");
-
-            time = convertLocalTimeToUtc(time);
-            logDebugP("%04d-%02d-%02d %02d:%02d:%02d (UTC) converted", (int)time.tm_year + 1900, (int)time.tm_mon + 1, (int)time.tm_mday, (int)time.tm_hour, (int)time.tm_sec, (int)time.tm_min);
-
-            logDebugP("29.3.2024 23:59 %d 0", (int)isSummerTime(2024, 3, 29, 23, 59));
-            logDebugP("30.3.2024 00:00 %d 0", (int)isSummerTime(2024, 3, 30, 0, 0));
-
-            logDebugP("30.3.2024 01:59 %d 0", (int)isSummerTime(2024, 3, 30, 1, 59));
-
-            logDebugP("31.3.2024 01:59 %d 0", (int)isSummerTime(2024, 3, 31, 1, 59));
-            logDebugP("31.3.2024 02:00 %d X", (int)isSummerTime(2024, 3, 31, 2, 00));
-            logDebugP("31.3.2024 02:01 %d X", (int)isSummerTime(2024, 3, 31, 2, 01));
-
-            logDebugP("31.3.2024 02:59 %d X", (int)isSummerTime(2024, 3, 31, 2, 59));
-            logDebugP("31.3.2024 03:00 %d 1", (int)isSummerTime(2024, 3, 31, 3, 00));
-            logDebugP("31.3.2024 03:01 %d 1", (int)isSummerTime(2024, 3, 31, 4, 01));
-
-            logDebugP("27.10.2024 01:59 %d 1", (int)isSummerTime(2024, 10, 27, 1, 59));
-            logDebugP("27.10.2024 02:00 %d ?", (int)isSummerTime(2024, 10, 27, 2, 00));
-            logDebugP("27.10.2024 02:01 %d ?", (int)isSummerTime(2024, 10, 27, 2, 01));
-
-            logDebugP("27.10.2024 02:59 %d ?", (int)isSummerTime(2024, 10, 27, 2, 59));
-            logDebugP("27.10.2024 03:00 %d 0", (int)isSummerTime(2024, 10, 27, 3, 00));
-            logDebugP("27.10.2024 03:01 %d 0", (int)isSummerTime(2024, 10, 27, 3, 01));
-            logDebugP("27.10.2024 23:59 %d 0", (int)isSummerTime(2024, 10, 27, 23, 59));
-            logDebugP("28.10.2024 00:00 %d 0", (int)isSummerTime(2024, 10, 28, 00, 00));
-            logDebugP("29.10.2024 00:00 %d 0", (int)isSummerTime(2024, 10, 29, 00, 00));
-            logDebugP("03.11.2024 00:00 %d 0", (int)isSummerTime(2024, 11, 3, 00, 00));
-            logDebugP("04.11.2024 00:00 %d 0", (int)isSummerTime(2024, 11, 4, 00, 00));
         }
 
         void TimeManager::setTime(std::time_t epoch, timezone* tz, unsigned long millisReceivedTimestamp)
@@ -336,12 +286,6 @@ namespace OpenKNX
             tv.tv_usec = milliseconds * 1000;
             settimeofday(&tv, tz);
             getLocalTime(); // call to update _isTimeValid
-
-            // DEGUB CODE BEGIN
-            auto time = getLocalTime();
-            logDebugP("%04d-%02d-%02d %02d:%02d:%02d (%s)", (int)time.tm_year + 1900, (int)time.tm_mon + 1, (int)time.tm_mday, (int)time.tm_hour, (int)time.tm_min, (int)time.tm_sec, time.tm_isdst ? "Summertime" : "Wintertime");
-            time = getUtcTime();
-            logDebugP("%04d-%02d-%02d %02d:%02d:%02d UTC", (int)time.tm_year + 1900, (int)time.tm_mon + 1, (int)time.tm_mday, (int)time.tm_hour, (int)time.tm_min, (int)time.tm_sec);
         }
 
         int TimeManager::isSummerTime(int year, int month, int day, int hour, int minute)
@@ -367,9 +311,7 @@ namespace OpenKNX
             tm localTimeinfoMinusOnHour;
             localtime_r(&rawtimeMinusOneHour, &localTimeinfoMinusOnHour);
             if (localTimeinfo.tm_isdst != localTimeinfoMinusOnHour.tm_isdst)
-            {
                 return -1;
-            }
             // Check if DST is active (tm_isdst == 1 means DST is active)
             return localTimeinfo.tm_isdst > 0;
         }

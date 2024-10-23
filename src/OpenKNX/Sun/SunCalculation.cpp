@@ -23,24 +23,25 @@ namespace OpenKNX
                 {
                     _lastHour = utc.tm_hour;
                     _lasMinute = utc.tm_min;
-                    recalculateSunCalculation();
+                    recalculateSunCalculation(utc);
                 }
             }
         }
 
-        void SunCalculation::recalculateSunCalculation()
+        void SunCalculation::recalculateSunCalculation(tm& utc)
         {
-            auto utc = openknx.time.getUtcTime();
             double latitude = ParamBASE_Latitude;
             double longitude = ParamBASE_Longitude;
 
             cTime cTime = {0};
-            cTime.iYear = utc.tm_year;
+            cTime.iYear = utc.tm_year + 1900;
             cTime.iMonth = utc.tm_mon + 1;
             cTime.iDay = utc.tm_mday;
             cTime.dHours = utc.tm_hour;
             cTime.dMinutes = utc.tm_min;
             cTime.dSeconds = 0;
+
+            logDebugP("%04d-%02d-%02d %02d:%02d", cTime.iYear, cTime.iMonth, cTime.iDay, (int) cTime.dHours, (int) cTime.dMinutes);
 
             cLocation cLocation = {0};
             cLocation.dLatitude = latitude;
@@ -53,7 +54,7 @@ namespace OpenKNX
 
             double rise, set;
             // sunrise/sunset calculation
-            SunRiseAndSet::sunRiseSet(utc.tm_year, utc.tm_mon + 1, utc.tm_mday,
+            SunRiseAndSet::sunRiseSet(utc.tm_year + 1900, utc.tm_mon + 1, utc.tm_mday,
                                       longitude, latitude, -35.0 / 60.0, 1, &rise, &set);
 
             _sunRiseUtc.tm_year = utc.tm_year;

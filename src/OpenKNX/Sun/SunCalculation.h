@@ -22,7 +22,7 @@ namespace OpenKNX
             void setup();
             void loop();
             bool processCommand(std::string& cmd, bool diagnoseKo);
-            void recalculateSunCalculation();
+            void recalculateSunCalculation(tm& utc);
             tm _sunRiseUtc;
             tm _sunSetUtc;
             tm _sunRiseLocalTime;
@@ -41,6 +41,27 @@ namespace OpenKNX
              * Returns the elevation
              */
             inline float elevation() { return _elevation; }
+
+            /*
+            * Returns the sun rise time in UTC for the current day
+            */
+            inline tm sunRiseUtc() {return _sunRiseUtc; }
+
+            /*
+            * Returns the sun set time in UTC for the current day
+            */
+            inline tm sunSetUtc() {return _sunSetUtc; }
+
+            /*
+            * Returns the sun rise time in local time for the current day
+            */
+            inline tm sunRiseLocalTime() {return _sunRiseLocalTime; }
+
+            /*
+            * Returns the sun set time in local time for the current day
+            */
+            inline tm sunSetLocalTime() {return _sunSetLocalTime; }
+            
         };
     } // namespace Sun
 } // namespace OpenKNX
