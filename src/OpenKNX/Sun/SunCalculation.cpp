@@ -82,7 +82,7 @@ namespace OpenKNX
         {
             if (cmd == "sun")
             {
-                if (isSubPositionValid())
+                if (isSunCalculatioValid())
                 {
                     logInfoP("Elevation: %f, Azimut: %f", _elevation, _azimut);
                     logInfoP("Used cordinates: %lf %lf", (double)ParamBASE_Latitude, (double)ParamBASE_Longitude);

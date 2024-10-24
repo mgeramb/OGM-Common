@@ -97,7 +97,8 @@ namespace OpenKNX
                         logInfoP("Invalid time format");
                         return true;
                     }
-                    logInfoP("%04d-%02d-%02d %02d:%02d", (int)tm.tm_year + 1900, (int)tm.tm_mon + 1, (int)tm.tm_mday, (int)tm.tm_hour, (int)tm.tm_min);
+                    bool summerTime = TimeManager::isSummerTime(tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min) != 0;
+                    logInfoP("%04d-%02d-%02d %02d:%02d (%s)", (int)tm.tm_year + 1900, (int)tm.tm_mon + 1, (int)tm.tm_mday, (int)tm.tm_hour, (int)tm.tm_min, summerTime ? "Summertime" : "Wintertime");
                     setLocalTime(tm, millis());
                     return true;
                 }

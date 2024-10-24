@@ -32,35 +32,35 @@ namespace OpenKNX
             /*
              * Returns true, if the sun position is calculated which requires a valid time
              */
-            inline bool isSubPositionValid() { return _sunCalculationValid; }
+            bool isSunCalculatioValid() { return _sunCalculationValid; }
             /*
              * Returns the azimut
              */
-            inline float azimut() { return _azimut; }
+            float azimut() { return _azimut; }
             /*
              * Returns the elevation
              */
-            inline float elevation() { return _elevation; }
+            float elevation() { return _elevation; }
 
             /*
             * Returns the sun rise time in UTC for the current day
             */
-            inline tm sunRiseUtc() {return _sunRiseUtc; }
+            tm sunRiseUtc() { return _sunRiseUtc; }
 
             /*
             * Returns the sun set time in UTC for the current day
             */
-            inline tm sunSetUtc() {return _sunSetUtc; }
+            tm sunSetUtc() {return _sunSetUtc; }
 
             /*
             * Returns the sun rise time in local time for the current day
             */
-            inline tm sunRiseLocalTime() {return _sunRiseLocalTime; }
+            tm sunRiseLocalTime() {return _sunRiseLocalTime; }
 
             /*
             * Returns the sun set time in local time for the current day
             */
-            inline tm sunSetLocalTime() {return _sunSetLocalTime; }
+            tm sunSetLocalTime() {return _sunSetLocalTime; }
             
         };
     } // namespace Sun
