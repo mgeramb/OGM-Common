@@ -71,32 +71,44 @@ namespace OpenKNX
                     // read on start
                     if (millis() - _waitTimerStart > 30000)
                     {
+                        logErrorP("Wait end for read on start");
                         _waitTimerStart = millis();
                         if (ParamBASE_CombinedTimeDate)
                         {
                             // combined date and time
                             if (!_hasTime)
+                            {
                                 KoBASE_Time.requestObjectRead();
+                                logErrorP("Read KoBASE_DateTime");  
+                            }
                         }
                         else
                         {
                             // date and time from separate KOs
                             if (!_hasTime)
+                            {
                                 KoBASE_Time.requestObjectRead();
+                                logErrorP("Read KoBASE_Time");
+                            }
                             if (!_hasDate)
+                            {
                                 KoBASE_Date.requestObjectRead();
+                                logErrorP("Read KoBASE_Date");
+                            }
                         }
                         if (!_hasSummertimeFlag && ParamBASE_SummertimeAll == 0)
                         {
                             KoBASE_IsSummertime.requestObjectRead();
+                            logErrorP("Read KoBASE_IsSummertime");
                         }
                     }
                     break;
                 }
-                case WaitStates::ReceiveOtherTelegrams:
+                case WaitStates::ReceiveMissingOtherTelegrams:
                 {
                     if (millis() - _waitTimerStart > 500)
                     {
+                        logErrorP("Wait end for ReceiveMissingOtherTelegrams");
                         _waitStates = WaitStates::None;
                         // Use the already loaded internal time for all time parts
                         _hasDate = true;
@@ -163,16 +175,11 @@ namespace OpenKNX
                             const bool lSummertime = raw[6] & DPT19_SUMMERTIME;
                             // <Enumeration Text="Kommunikationsobjekt 'Sommerzeit aktiv'" Value="0" Id="%ENID%" />
                             // <Enumeration Text="Kombiniertes Datum/Zeit-KO (DPT 19)" Value="1" Id="%ENID%" />
-                            // <Enumeration Text="Interne Berechnung (nur in Deutschland)" Value="2" Id="%ENID%" />
+                            // <Enumeration Text="Interne Berechnung" Value="2" Id="%ENID%" />
                             if (ParamBASE_SummertimeAll == 1)
                             {
+                                logErrorP("Read summertime from telegram %d", (int)lSummertime);
                                 _dateTime.tm_isdst = lSummertime;
-                                _hasSummertimeFlag = true;
-                            }
-                            else if (!_hasSummertimeFlag && openknx.time.isTimeValid())
-                            {
-                                // We have a valid time, use the current summertime flag
-                                _dateTime.tm_isdst = openknx.time.getLocalTime().tm_isdst;
                                 _hasSummertimeFlag = true;
                             }
                             checkHasAllDateTimeParts();
@@ -290,26 +297,66 @@ namespace OpenKNX
             // <Enumeration Text="Interne Berechnung" Value="2" Id="%ENID%" />
             if (ParamBASE_SummertimeAll == 2 && _hasDate && _hasTime)
             {
-                bool isActive = TimeManager::isSummerTime(_dateTime.tm_year, _dateTime.tm_mon, _dateTime.tm_mday, _dateTime.tm_hour, _dateTime.tm_min);
-                _dateTime.tm_isdst = isActive;
+                int isActive = TimeManager::isSummerTime(_dateTime.tm_year, _dateTime.tm_mon, _dateTime.tm_mday, _dateTime.tm_hour, _dateTime.tm_min);
+                if (isActive >= 0)
+                {
+                    _dateTime.tm_isdst = isActive == 1;
+                }
+                else
+                {
+                    // switching hour in autumn, its unknown if summer or winter time because the local hour exist twice
+                    if (openknx.time.isTimeValid())
+                    {
+                        auto currentLocalTime = openknx.time.getLocalTime();
+                        _dateTime.tm_isdst = currentLocalTime.tm_isdst; // asume same time
+                        auto currentTime = mktime(&currentLocalTime);
+                        auto newTime = mktime(&currentLocalTime);
+                        auto seconds = difftime(currentTime, newTime);
+                        if (seconds < -2700)
+                        {
+                            // new time is more then 45 minutes behind current time, assume switch to winter time
+                            _dateTime.tm_isdst = 0;
+                        }
+                        else
+                        {
+                            // new time seems to be summertime
+                             _dateTime.tm_isdst = 1;
+                        }
+                        logErrorP("Assume {%s} because %lf seconds differen",_dateTime.tm_isdst ? "Summertime" : "Wintertime",  seconds);                     
+                    }
+                    else
+                    {
+                        // No information about summer or winter time available. Just guess it's summer time
+                        _dateTime.tm_isdst = 1;
+                        logErrorP("Guess to have summer time"); 
+
+                    }
+                }
                 _hasSummertimeFlag = true;
             }
             if (_hasDate && _hasTime && _hasSummertimeFlag)
             {
                 _waitTimerStart = WaitStates::None;
-                tm tmp = _dateTime;
-                tmp.tm_sec += (millis() - _timeStampTimeReceived) / 1000;
-                mktime(&tmp); // normalize
-
-                setLocalTime(tmp);
+  
+                logErrorP("Set %04d-%02d-%02d %02d:%02d:%02d (%s) with offset of {%d}ms", 
+                _dateTime.tm_year + 1900,
+                _dateTime.tm_mon + 1,
+                _dateTime.tm_mday,
+                _dateTime.tm_hour,
+                _dateTime.tm_min,
+                _dateTime.tm_sec,
+                _dateTime.tm_isdst ? "Summertime" : "Wintertime",
+                millis() - _timeStampTimeReceived);
+                setLocalTime(_dateTime, _timeStampTimeReceived);
                 _hasDate = false;
                 _hasTime = false;
                 _hasSummertimeFlag = false;
             }
             else if (openknx.time.isTimeValid() && _waitStates == WaitStates::None) 
             {
+                logErrorP("Not all parts received, start wait for missing telegrams");
                 _waitTimerStart = millis();
-                _waitStates = WaitStates::ReceiveOtherTelegrams;
+                _waitStates = WaitStates::ReceiveMissingOtherTelegrams;
             }
         }
 

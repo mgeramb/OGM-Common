@@ -11,7 +11,7 @@ namespace OpenKNX
             {
                 None,
                 InitialRead,
-                ReceiveOtherTelegrams
+                ReceiveMissingOtherTelegrams
             };
             WaitStates _waitStates = WaitStates::None;
             bool _configured = false;
