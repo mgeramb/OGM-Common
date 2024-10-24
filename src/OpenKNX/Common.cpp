@@ -856,6 +856,8 @@ namespace OpenKNX
             _runtimeLoop.showStat("___Loop", 0, stat, hist);
             _runtimeConsole.showStat("__Console", 0, stat, hist);
             _runtimeKnxStack.showStat("__KnxStack", 0, stat, hist);
+            _runtimeTimeManager.showStat("__Time", 0, stat, hist);
+            _runtimeSunCalculation.showStat("__Sun", 0, stat, hist);
             _runtimeModuleLoop.showStat("_All_Modules_Loop", 0, stat, hist);
             for (uint8_t i = 0; i < openknx.modules.count; i++)
             {
