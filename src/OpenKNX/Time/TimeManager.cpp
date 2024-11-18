@@ -132,11 +132,11 @@ namespace OpenKNX
                 logInfoP("%s", time.toString().c_str());
                 logInfoP("%s", time.dayOfWeekString());
 #ifdef LOG_HolidayKo
-                if (openknx.calender.isWorkingDayToday())
+                if (openknx.calendar.isWorkingDayToday())
                     logInfoP("Today is a working day");
                 else
                     logInfoP("Today is a non-working day");
-                if (openknx.calender.isWorkingDayTommorow())
+                if (openknx.calendar.isWorkingDayTommorow())
                     logInfoP("Tomorrow is a working day");
                 else
                     logInfoP("Tomorrow is a non-working day");
@@ -166,11 +166,11 @@ namespace OpenKNX
                     break;
             }
             logInfoP("Offset for daylight saving time: %ds", (int)_dayLightSavingTimeOffset);
-            if (openknx.calender.isValid())
+            if (openknx.calendar.isValid())
             {
-                DateOnly easter = openknx.calender.getEaster();
+                DateOnly easter = openknx.calendar.getEaster();
                 logInfoP("Easter: %04d-%02d-%02d", easter.year, easter.month, easter.day);
-                DateOnly advent = openknx.calender.getForthAdvent();
+                DateOnly advent = openknx.calendar.getForthAdvent();
                 logInfoP("4th advent: %04d-%02d-%02d", advent.year, advent.month, advent.day);
             }
 
